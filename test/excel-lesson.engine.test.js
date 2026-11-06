@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 
-const base = path.join(__dirname, '..', 'js', 'engine');
+const base = path.join(__dirname, '..', 'public', 'js', 'engine');
 const load = (f) => import(pathToFileURL(path.join(base, f)).href);
 
 let W, F, R, V;

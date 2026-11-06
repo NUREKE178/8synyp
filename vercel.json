@@ -1,7 +1,11 @@
 {
   "framework": null,
+  "installCommand": "npm install",
   "buildCommand": "",
-  "outputDirectory": ".",
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.js?path=:path*" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

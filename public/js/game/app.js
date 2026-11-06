@@ -8,14 +8,17 @@ import { Sheet } from '../ui/sheet.js';
 import { XRay } from '../ui/xray.js';
 import { Mascot } from '../ui/mascot.js';
 import { sound, confetti, toast } from '../ui/fx.js';
-import { LEVELS, XP, levelMaxXp } from './levels.js';
+import { LEVELS, XP } from './levels.js';
 import { state, save, subscribe, markLevel, totalXp, rankFor, resetProgress, RANKS } from './state.js';
+import { MAX_XP } from './grade.js';
+import { isTeacher, checkSession } from './teacher.js';
+import { startSync } from './sync.js';
+import { mountTeacherPanel } from './teacher-panel.js';
 import { DemoRunner } from './demo.js';
 import { mountBoss } from './quiz.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const app = $('#app');
-const MAX_XP = LEVELS.reduce((s, l) => s + levelMaxXp(l), 0) + 8 * 60 + 300;
 const SLIDES = { addr: '5-слайд', stats: '3–4-слайд', relative: '6–8-слайд', absolute: '9–10-слайд', share: '11–12-слайд', mixed: '13-слайд' };
 let current = null; // ағымдағы экранның destroy функциясы
 
@@ -34,10 +37,9 @@ function updateHud() {
   $('#hudBar').style.width = Math.min(100, ((xp - from) / Math.max(1, to - from)) * 100) + '%';
   $('#btnSound').setAttribute('aria-pressed', String(!state.mute));
   $('#btnSound').textContent = state.mute ? '🔇' : '🔊';
-  $('#btnTeacher').setAttribute('aria-pressed', String(state.teacher));
-  $('#btnTeacher').classList.toggle('on', state.teacher);
-  $('#btnPlan').hidden = !state.teacher;
-  document.body.classList.toggle('teacher', state.teacher);
+  $('#btnPlan').hidden = !isTeacher();
+  $('#teacherBadge').hidden = !isTeacher();
+  document.body.classList.toggle('teacher', isTeacher());
 }
 
 function applyTheme() {
@@ -51,10 +53,11 @@ function bindHud() {
     const order = ['auto', 'light', 'dark']; state.theme = order[(order.indexOf(state.theme) + 1) % 3]; save(); applyTheme();
     toast({ auto: 'Тақырып: құрылғыға сай', light: 'Тақырып: жарық', dark: 'Тақырып: қараңғы' }[state.theme]);
   });
-  $('#btnTeacher').addEventListener('click', () => {
-    state.teacher = !state.teacher; save(); updateHud();
-    toast(state.teacher ? 'Мұғалім режимі қосылды: барлық деңгей ашық, демо және шешім бар' : 'Мұғалім режимі өшірілді');
-    render();
+  // Жасырын кіру: логотипті 3 рет жылдам бассаң — мұғалім кіруі ашылады (түйме жоқ)
+  let taps = 0, tapTimer = null;
+  $('.logo').addEventListener('click', (e) => {
+    taps += 1; clearTimeout(tapTimer); tapTimer = setTimeout(() => { taps = 0; }, 700);
+    if (taps >= 3) { e.preventDefault(); taps = 0; location.hash = '#/teacher'; }
   });
   $('#btnCheat').addEventListener('click', openCheat);
   $('#btnPlan').addEventListener('click', openPlan);
@@ -124,7 +127,8 @@ function render() {
   } else if (name === 'boss') {
     if (!bossUnlocked()) { toast('Финал алты деңгейді өткен соң ашылады 🔒'); go('#/map'); return; }
     current = screenBoss();
-  } else if (name === 'sandbox') current = screenSandbox();
+  } else if (name === 'teacher') current = mountTeacherPanel(app, { go, toast, onAuthChange: updateHud, openPlan });
+  else if (name === 'sandbox') current = screenSandbox();
   else if (name === 'end') current = screenEnd();
   else current = screenHome();
   document.title = title;
@@ -133,8 +137,8 @@ function render() {
 }
 
 const isDone = (id) => !!state.done[id];
-function isUnlocked(L) { if (state.teacher) return true; const i = LEVELS.indexOf(L); return i === 0 || isDone(LEVELS[i - 1].id); }
-const bossUnlocked = () => state.teacher || LEVELS.every((l) => isDone(l.id));
+function isUnlocked(L) { if (isTeacher()) return true; const i = LEVELS.indexOf(L); return i === 0 || isDone(LEVELS[i - 1].id); }
+const bossUnlocked = () => isTeacher() || LEVELS.every((l) => isDone(l.id));
 
 // ───────────────────────── басты бет ─────────────────────────
 function screenHome() {
@@ -146,8 +150,10 @@ function screenHome() {
         <h1>Формула <span class="grad">Квест</span></h1>
         <p class="lead">Статистикалық мәліметтер. Абсолютті және салыстырмалы сілтемелер. Шын кестемен жұмыс істе, баг аула, қазына тап және финалда <b>Қателер королімен</b> шайқас!</p>
         <form class="start-form" id="startForm">
-          <label for="pname">Ойыншының аты</label>
-          <div class="row"><input id="pname" name="name" maxlength="24" placeholder="Атыңды жаз" autocomplete="given-name" value="${esc(state.name)}"/><button class="btn primary big" type="submit">${Object.keys(state.done).length ? 'Жалғастыру' : 'Ойынды бастау'} ▶</button></div>
+          <label for="pname">Аты-жөніңді жаз</label>
+          <div class="row"><input id="pname" name="name" maxlength="40" required placeholder="Аты-жөні (мысалы, Айдана С.)" autocomplete="name" value="${esc(state.name)}"/>
+            <input id="pcls" name="cls" list="clsList" maxlength="8" class="cls" placeholder="Сынып" aria-label="Сынып" value="${esc(state.cls || '')}"/><datalist id="clsList"><option value="8А"><option value="8Ә"><option value="8Б"></datalist></div>
+          <div class="row"><button class="btn primary big" type="submit">${Object.keys(state.done).length ? 'Жалғастыру' : 'Ойынды бастау'} ▶</button></div>
         </form>
         <ul class="chips"><li>6 деңгей</li><li>1 финалдық босс</li><li>≈ 45 минут</li><li>Нағыз Excel сияқты кесте</li></ul>
       </div>
@@ -197,7 +203,9 @@ function screenHome() {
   })();
   $('#startForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    state.name = ($('#pname').value || '').trim().slice(0, 24) || 'Ойыншы'; save();
+    state.name = ($('#pname').value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (!state.name) { $('#pname').focus(); return; }
+    state.cls = ($('#pcls').value || '').trim().slice(0, 8); save();
     sound.play('click');
     go('#/map');
   });
@@ -274,7 +282,7 @@ function screenLevel(L) {
       </div>
     </div>
     <div class="lv-right">
-      <div class="teacher-bar" ${state.teacher ? '' : 'hidden'}>
+      <div class="teacher-bar" ${isTeacher() ? '' : 'hidden'}>
         <span class="tb-label">Мұғалім</span>
         <button class="btn small" id="btnDemo" type="button">▶ Демо</button>
         <button class="btn small" id="btnSolve" type="button">✔ Шешімді көрсету</button>
@@ -544,8 +552,11 @@ function screenEnd() {
 }
 
 // ───────────────────────── іске қосу ─────────────────────────
-export function boot() {
+export async function boot() {
   applyTheme(); bindHud(); updateHud();
+  await checkSession();   // мұғалім сессиясы бар ма (API жоқ болса — үнсіз өтеді)
+  updateHud();
   window.addEventListener('hashchange', render);
+  startSync();
   render();
 }
