@@ -1,0 +1,11 @@
+{
+  "name": "formula-quest",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Формула Квест: 8-сынып информатикасы, статистикалық функциялар және ұяшық сілтемелері туралы ойын-сабақ",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "npx --yes serve . -l 8080",
+    "test": "node --test"
+  }
+}

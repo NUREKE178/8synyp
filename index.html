@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="kk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Формула Квест — кестелік сілтемелер ойыны</title>
+  <meta name="description" content="8-сынып информатикасы: статистикалық функциялар, салыстырмалы және абсолютті сілтемелер. Ойын түріндегі интерактивті сабақ.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#6c4dff">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%236c4dff'/%3E%3Ctext x='16' y='23' font-family='monospace' font-weight='800' font-size='18' text-anchor='middle' fill='%23ffd23f'%3Efx%3C/text%3E%3C/svg%3E">
+  <link rel="preload" href="fonts/Onest-cyrillic-ext.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/Onest-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip" href="#app">Мазмұнға өту</a>
+
+  <header class="hud" id="hud">
+    <a class="logo" href="#/" aria-label="Формула Квест: басты бет"><span class="logo-mark">ƒx</span><span class="logo-text">Формула Квест</span></a>
+    <nav class="hud-nav" aria-label="Негізгі"><a href="#/map">🗺 Карта</a><a href="#/sandbox">🧰 Алаң</a></nav>
+    <div class="hud-xp" title="Тәжірибе ұпайы мен ранг">
+      <div class="xp-row"><span class="xp-rank" id="hudRank">🥚 Жаңа бастаушы</span><span class="xp-num"><b id="hudXp">0</b> XP</span></div>
+      <div class="xp-bar" aria-hidden="true"><div id="hudBar"></div></div>
+    </div>
+    <div class="hud-btns">
+      <button class="icon-btn" id="btnPlan" type="button" hidden title="Сабақ жоспары (мұғалімге)" aria-label="Сабақ жоспары">📋</button>
+      <button class="icon-btn" id="btnCheat" type="button" title="Шпаргалка: функциялар мен сілтемелер" aria-label="Шпаргалка">📘</button>
+      <button class="icon-btn" id="btnSound" type="button" title="Дыбыс" aria-label="Дыбысты қосу/өшіру" aria-pressed="false">🔇</button>
+      <button class="icon-btn" id="btnTheme" type="button" title="Түс тақырыбы" aria-label="Түс тақырыбын ауыстыру">🌓</button>
+      <button class="icon-btn teacher-btn" id="btnTeacher" type="button" title="Мұғалім режимі" aria-label="Мұғалім режимі" aria-pressed="false">👩‍🏫</button>
+    </div>
+  </header>
+
+  <main id="app" tabindex="-1"></main>
+
+  <dialog id="dlgCheat" class="dlg" aria-label="Шпаргалка"><div class="dlg-head"><h2>📘 Шпаргалка</h2><button class="icon-btn" data-close type="button" aria-label="Жабу">✕</button></div><div class="dlg-body"></div></dialog>
+  <dialog id="dlgPlan" class="dlg" aria-label="Сабақ жоспары"><div class="dlg-head"><h2>📋 Мұғалімге</h2><button class="icon-btn" data-close type="button" aria-label="Жабу">✕</button></div><div class="dlg-body"></div></dialog>
+
+  <noscript><p style="padding:2rem;font:16px system-ui">Бұл ойынды іске қосу үшін JavaScript қосылуы керек.</p></noscript>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
