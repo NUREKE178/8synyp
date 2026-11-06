@@ -4,6 +4,12 @@ import { MAX_XP } from './grade.js';
 import { isTeacher } from './teacher.js';
 
 let timer = null, retry = null, inFlight = false, dirty = false;
+// Күйі: 'off' (жіберілмейді/сервер жоқ) | 'pending' | 'ok' | 'fail'. HUD-тағы бұлт белгісі үшін.
+let status = { state: 'off', error: '' };
+const listeners = new Set();
+const setStatus = (state, error = '') => { status = { state, error }; listeners.forEach((fn) => fn(status)); };
+export const syncStatus = () => status;
+export const onSyncStatus = (fn) => { listeners.add(fn); fn(status); return () => listeners.delete(fn); };
 
 function payload() {
   const levels = {};
@@ -17,13 +23,17 @@ function payload() {
 async function send() {
   if (inFlight) { dirty = true; return; }
   if (isTeacher() || !state.name) return;
-  inFlight = true; dirty = false;
+  inFlight = true; dirty = false; if (status.state !== 'ok') setStatus('pending');
   try {
     const res = await fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload()), keepalive: true });
-    if (res.status === 404 || res.status === 405) return; // API жоқ — қайталамаймыз
-    if (!res.ok) throw new Error(String(res.status));
-    clearTimeout(retry); retry = null;
-  } catch {
+    if (res.status === 404 || res.status === 405) { setStatus('off'); return; } // API жоқ — қайталамаймыз
+    if (!res.ok) {
+      let msg = ''; try { msg = (await res.json()).error || ''; } catch { /* ignore */ }
+      throw new Error(msg || `HTTP ${res.status}`);
+    }
+    clearTimeout(retry); retry = null; setStatus('ok');
+  } catch (e) {
+    setStatus('fail', e && e.message ? e.message : 'Желі қатесі');
     clearTimeout(retry); retry = setTimeout(send, 20000); // желі үзілсе — 20 секундтан кейін қайталаймыз
   } finally {
     inFlight = false;

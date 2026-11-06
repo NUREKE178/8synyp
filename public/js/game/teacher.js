@@ -33,5 +33,6 @@ export async function fetchResults() {
   if (r.status === 401) info.teacher = false;
   return r;
 }
+export const diagnose = () => call('GET', '/api/diagnose');
 export const deleteResult = (uid) => call('DELETE', `/api/results?id=${encodeURIComponent(uid)}`);
 export const deleteAllResults = () => call('DELETE', '/api/results?all=1');

@@ -12,7 +12,7 @@ import { LEVELS, XP } from './levels.js';
 import { state, save, subscribe, markLevel, totalXp, rankFor, resetProgress, RANKS } from './state.js';
 import { MAX_XP } from './grade.js';
 import { isTeacher, checkSession } from './teacher.js';
-import { startSync } from './sync.js';
+import { startSync, onSyncStatus } from './sync.js';
 import { mountTeacherPanel } from './teacher-panel.js';
 import { DemoRunner } from './demo.js';
 import { mountBoss } from './quiz.js';
@@ -62,6 +62,15 @@ function bindHud() {
   $('#btnCheat').addEventListener('click', openCheat);
   $('#btnPlan').addEventListener('click', openPlan);
   subscribe(updateHud);
+  // Бұлт белгісі: нәтиже мұғалімге жіберілгенін көрсетеді (қате болса — қызыл)
+  onSyncStatus((s) => {
+    const el = $('#syncDot'); if (!el) return;
+    el.hidden = s.state === 'off' || isTeacher() || !state.name;
+    el.className = `sync ${s.state}`;
+    el.textContent = s.state === 'ok' ? '☁✓' : s.state === 'fail' ? '☁✕' : '☁…';
+    el.title = s.state === 'ok' ? 'Нәтиже мұғалімге жіберілді' : s.state === 'fail' ? `Нәтиже жіберілмеді: ${s.error}. Мұғалімге айт.` : 'Жіберілуде…';
+    el.setAttribute('aria-label', el.title);
+  });
   document.addEventListener('click', (e) => { const b = e.target.closest('[data-close]'); if (b) b.closest('dialog').close(); });
 }
 

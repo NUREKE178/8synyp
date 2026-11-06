@@ -526,3 +526,13 @@ a.lv-card:hover { transform: translate(-3px, -3px) rotate(-.6deg); box-shadow: 8
   .tp-table th, .tp-table td { white-space: normal; }
   .tp-name { border: 0; }
 }
+
+/* Жіберу күйінің белгісі */
+.sync { display: inline-flex; align-items: center; height: 40px; padding: 0 10px; font: 800 13px var(--mono); border: 3px solid var(--line); border-radius: 12px; background: var(--card); cursor: help; }
+.sync.ok { background: color-mix(in srgb, var(--mint) 45%, var(--card)); }
+.sync.fail { background: var(--coral); color: #14122b; animation: pulse 1.2s ease-in-out infinite; }
+.sync.pending { opacity: .7; }
+.tp-warn { background: color-mix(in srgb, var(--coral) 28%, var(--card)); border: 3px solid var(--line); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px; font-weight: 600; display: grid; gap: 8px; }
+.tp-warn b { font-size: 16px; }
+.tp-diag { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 4px; font: 600 14px var(--mono); }
+.tp-diag .ok { color: var(--good); } .tp-diag .bad { color: var(--bad); }

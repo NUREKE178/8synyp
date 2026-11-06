@@ -1,7 +1,7 @@
 // Жасырын мұғалім панелі (#/teacher): сынып нәтижелері, 6–10 балл, CSV. Сілтеме беттерде жоқ, кіру — құпиясөзбен.
 import { LEVELS } from './levels.js';
 import { MAX_XP, gradeFor, loadRules, saveRules, DEFAULT_RULES } from './grade.js';
-import { teacherInfo, checkSession, login, logout, fetchResults, deleteResult, deleteAllResults } from './teacher.js';
+import { teacherInfo, checkSession, login, logout, fetchResults, deleteResult, deleteAllResults, diagnose } from './teacher.js';
 import { escapeHtml as esc } from '../ui/colors.js';
 
 const ids = [...LEVELS.map((l) => l.id), 'boss'];
@@ -23,7 +23,7 @@ function csvCell(v) { const s = String(v ?? ''); return /[;"\n]/.test(s) ? `"${s
  * @returns {() => void} destroy
  */
 export function mountTeacherPanel(app, io) {
-  let alive = true, timer = null, items = [], now = Date.now(), filterCls = 'all', query = '', sort = { key: 'name', dir: 1 }, auto = true, expanded = new Set(), rules = loadRules();
+  let alive = true, timer = null, problem = '', warnings = [], diag = null, items = [], now = Date.now(), filterCls = 'all', query = '', sort = { key: 'name', dir: 1 }, auto = true, expanded = new Set(), rules = loadRules();
 
   const destroy = () => { alive = false; clearInterval(timer); };
 
@@ -87,6 +87,7 @@ export function mountTeacherPanel(app, io) {
         <div><p class="eyebrow">Мұғалім панелі · жасырын</p><h2>Сынып нәтижелері</h2><p class="muted">Балл — 6–10 шкаласымен, жиналған XP үлесі бойынша. Оқушылар бұл бетті көрмейді.</p></div>
         <div class="tp-actions">
           <button class="btn small" id="tpRefresh" type="button">↻ Жаңарту</button>
+          <button class="btn small" id="tpDiag" type="button">🩺 Қойманы тексеру</button>
           <label class="tp-auto"><input type="checkbox" id="tpAuto" ${auto ? 'checked' : ''}/> авто (15 с)</label>
           <button class="btn small" id="tpCsv" type="button" ${items.length ? '' : 'disabled'}>⬇ CSV</button>
           <button class="btn small" id="tpPrint" type="button">🖨</button>
@@ -95,6 +96,8 @@ export function mountTeacherPanel(app, io) {
         </div>
       </div>
 
+      ${problem || warnings.length ? `<div class="tp-warn" role="alert"><b>⚠ ${problem ? esc(problem) : esc(warnings.join(' · '))}</b><span>Оқушылардың нәтижесі осы себептен көрінбеуі мүмкін. «Қойманы тексеру» батырмасын басыңыз.</span></div>` : ''}
+      ${diag ? `<div class="tp-warn" style="background:var(--card)"><b>Қойма тексерісі</b><ul class="tp-diag">${[['Режим', true, diag.mode + (diag.vercel ? ' (Vercel)' : '') + (diag.credentials ? ' · ' + diag.credentials : ' · токен жоқ')], ['Жазу', diag.write && diag.write.ok, diag.write && diag.write.error], ['Оқу', diag.read && diag.read.ok, diag.read && diag.read.error], ['Тізім', diag.list && diag.list.ok, diag.list && (diag.list.error || (diag.list.count + ' файл'))]].map(([n, ok, t]) => `<li class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${n}${t ? ': ' + esc(t) : ''}</li>`).join('')}</ul>${diag.hint ? `<span>${esc(diag.hint)}</span>` : '<span>Бәрі дұрыс: қойма жұмыс істеп тұр.</span>'}</div>` : ''}
       <div class="tp-stats">
         <div class="tp-stat"><b>${items.length}</b><span>оқушы</span></div>
         <div class="tp-stat"><b>${avg}</b><span>орташа балл</span></div>
@@ -142,6 +145,11 @@ export function mountTeacherPanel(app, io) {
   function bind() {
     const $ = (s) => app.querySelector(s);
     $('#tpRefresh').addEventListener('click', load);
+    $('#tpDiag').addEventListener('click', async () => {
+      const b = $('#tpDiag'); b.disabled = true; b.textContent = 'Тексерілуде…';
+      const r = await diagnose(); diag = r.ok ? r.data : { mode: '—', write: { ok: false, error: (r.data && r.data.error) || 'Серверге қосылу мүмкін емес' }, hint: '' };
+      render();
+    });
     $('#tpAuto').addEventListener('change', (e) => { auto = e.target.checked; schedule(); });
     $('#tpPrint').addEventListener('click', () => window.print());
     $('#tpPlan').addEventListener('click', io.openPlan);
@@ -181,7 +189,8 @@ export function mountTeacherPanel(app, io) {
     const r = await fetchResults();
     if (!alive) return;
     if (r.status === 401) { io.onAuthChange(); renderGate('Сессия аяқталды, қайта кіріңіз'); clearInterval(timer); return; }
-    if (!r.ok || !r.data) { io.toast((r.data && r.data.error) || 'Нәтижелерді жүктеу мүмкін болмады', 'warn'); if (!items.length) render(); return; }
+    if (!r.ok || !r.data) { problem = (r.data && r.data.error) || 'Нәтижелерді жүктеу мүмкін болмады (сервер жауап бермеді)'; render(); return; }
+    problem = ''; warnings = r.data.warnings || [];
     items = r.data.items || []; now = r.data.now || Date.now(); storage = r.data.storage === 'vercel-blob' ? 'Vercel Blob' : 'жергілікті файл';
     render();
   }
